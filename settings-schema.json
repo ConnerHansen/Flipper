@@ -47,7 +47,7 @@
     "description": "Transition Effect",
     "default": "Slide",
     "options": {
-      "Card Deck": "Deck",
+      "Deck": "Deck",
       "Flip": "Flip",
       "Slide": "Slide"
     }
@@ -57,16 +57,16 @@
     "description": "Transition Easing",
     "default": "Expo",
     "options": {
-      "Quad": "Quad",
-      "Cubic": "Cubic",
-      "Quart": "Quart",
-      "Quint": "Quint",
-      "Sine": "Sine",
-      "Expo": "Expo",
-      "Circ": "Circ",
-      "Elastic": "Elastic",
       "Back": "Back",
-      "Bounce": "Bounce"
+      "Bounce": "Bounce",
+      "Circ": "Circ",
+      "Cubic": "Cubic",
+      "Elastic": "Elastic",
+      "Expo": "Expo",
+      "Sine": "Sine",
+      "Quad": "Quad",
+      "Quart": "Quart",
+      "Quint": "Quint"
     }
   },
   "easeMidpoint": {

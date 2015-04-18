@@ -382,6 +382,14 @@ Flipper.prototype = {
       return effect;
     },
 
+    getHalfScale: function() {
+      return settings.pullaway + (1 - settings.pullaway)/2;
+    },
+
+    getScale: function() {
+      return settings.pullaway;
+    },
+
     getTime: function() {
       if(this.hurry) {
         return settings.animationTime / 6000;
@@ -429,6 +437,8 @@ Flipper.prototype = {
       //     this.scale(from, to, direction);
       // else
       // this.rotate_mid(from, to, direction);
+      to.set_scale(1,1);
+      from.set_scale(1,1);
 
       if(settings.transitionEffect == "Flip")
         this.flip_start(from, to, direction);
@@ -558,8 +568,8 @@ Flipper.prototype = {
 
       Tweener.addTween(from, {
           x: fromTransition,
-          scale_center_x: 1,
-          scale_center_y: 1,
+          scale_x: this.getScale(),
+          scale_y: this.getScale(),
           opacity: 255 * (1.0 - settings.fade),
           transition: this.getEasing(false),
           time: this.getTime(),
@@ -582,8 +592,6 @@ Flipper.prototype = {
     slide_start: function(from, to, direction) {
       this.is_animating = true;
       to.raise_top();
-      // to.show();
-      // from.show();
 
       from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
       to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
@@ -611,10 +619,13 @@ Flipper.prototype = {
         fromTransition = -this.monitor.width/2;
       }
 
+      from.set_scale(1,1);
+      to.set_scale(settings.pullaway, settings.pullaway);
+
       Tweener.addTween(from, {
           x: fromTransition,
-          scale_center_x: settings.pullaway,
-          scale_center_y: settings.pullaway,
+          scale_x: this.getHalfScale(),
+          scale_y: this.getHalfScale(),
           opacity: 255 * (1.0 - settings.fade),
           transition: this.getEasing(true),
           time: this.getTime(),
@@ -623,8 +634,8 @@ Flipper.prototype = {
       Tweener.addTween(to, {
           x: toTransition,
           opacity: 255 * (1.0 - settings.fade),
-          scale_center_x: settings.pullaway,
-          scale_center_y: settings.pullaway,
+          scale_x: this.getHalfScale(),
+          scale_y: this.getHalfScale(),
           transition: this.getEasing(true),
           time: this.getTime(),
           onCompleteParams: [from, to, direction],
@@ -638,67 +649,24 @@ Flipper.prototype = {
 
       let toTransition;
       let fromTransition;
-      // to.raise_top();
       this.new_workspace.activate(global.get_current_time());
 
-      // if (direction == Meta.MotionDirection.LEFT) {
-      //   fromTransition = this.monitor.width;
-      // } else {
-      //   fromTransition = -this.monitor.width;
-      // }
-      //
-      // Tweener.addTween(from, {
-      //     x: fromTransition,
-      //     scale_center_x: 1,
-      //     scale_center_y: 1,
-      //     opacity: 255 * (1.0 - settings.fade),
-      //     transition: this.getEasing(false),
-      //     time: this.getTime(),
-      // });
-      //
-      // Tweener.addTween(to, {
-      //     x: 0,
-      //     opacity: 255,
-      //     scale_x: 1.0,
-      //     scale_y: 1.0,
-      //     transition: this.getEasing(false),
-      //     time: this.getTime(),
-      //     onComplete: this.unsetIsAnimating,
-      //     onCompleteScope: this
-      // });
       if (direction == Meta.MotionDirection.LEFT) {
-        // from.set_position(0, this.monitor.height/2);
-        // from.rotation_angle_y = 0
-        //
-        // to.set_position(-this.monitor.width, this.monitor.height/2);
-        // to.rotation_angle_y = 0
-        //
-        // toTransition = -this.monitor.width/2;
-        // fromTransition = this.monitor.width/2;
         Tweener.addTween(to, {
             x: 0,
             opacity: 255,
-            scale_center_x: settings.pullaway,
-            scale_center_y: settings.pullaway,
+            scale_x: 1,
+            scale_y: 1,
             transition: this.getEasing(false),
             time: this.getTime(),
             onComplete: this.unsetIsAnimating,
             onCompleteScope: this
         });
       } else {
-        // from.set_position(0, this.monitor.height/2);
-        // from.rotation_angle_y = 0
-        //
-        // to.set_position(0, this.monitor.height/2);
-        // to.rotation_angle_y = 0
-
-        // toTransition = this.monitor.width/2;
-        // fromTransition = -this.monitor.width/2;
-
         Tweener.addTween(from, {
             x: -this.monitor.width,
-            scale_center_x: settings.pullaway,
-            scale_center_y: settings.pullaway,
+            scale_x: this.getScale(),
+            scale_y: this.getScale(),
             opacity: 255 * (1.0 - settings.fade),
             transition: this.getEasing(false),
             time: this.getTime(),
@@ -728,11 +696,12 @@ Flipper.prototype = {
         to.rotation_angle_y = 0
 
         toTransition = -this.monitor.width/2;
+        to.set_scale(0, 0);
         Tweener.addTween(to, {
             x: toTransition,
             opacity: 255 * (1.0 - settings.fade),
-            scale_center_x: settings.pullaway,
-            scale_center_y: settings.pullaway,
+            scale_x: this.getHalfScale(),
+            scale_y: this.getHalfScale(),
             transition: this.getEasing(true),
             time: this.getTime(),
             onCompleteParams: [from, to, direction],
@@ -746,13 +715,11 @@ Flipper.prototype = {
         to.set_position(0, this.monitor.height/2);
         to.rotation_angle_y = 0
 
-        // toTransition = this.monitor.width/2;
         fromTransition = -this.monitor.width/2;
-
         Tweener.addTween(from, {
             x: fromTransition,
-            scale_center_x: settings.pullaway,
-            scale_center_y: settings.pullaway,
+            scale_x: this.getHalfScale(),
+            scale_y: this.getHalfScale(),
             opacity: 255 * (1.0 - settings.fade),
             transition: this.getEasing(true),
             time: this.getTime(),
