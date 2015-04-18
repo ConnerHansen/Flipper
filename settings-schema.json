@@ -1,0 +1,77 @@
+{
+  "header1" : {
+    "type" : "header",
+    "description" : "General"
+  },
+  "animationTime" : {
+    "type" : "scale",
+    "description" : "Animation duration",
+    "min" : 0,
+    "max" : 5000,
+    "default": 500,
+    "step" : 25
+  },
+  "maxAngle" : {
+    "type" : "scale",
+    "description" : "Rotation Angle",
+    "min" : 0,
+    "max" : 180,
+    "default": 180,
+    "step" : 5
+  },
+  "pullaway" : {
+    "type" : "scale",
+    "description" : "Zoom Amount",
+    "min" : 0.00,
+    "max" : 1.0,
+    "default" : 0.75,
+    "step" : 0.05
+  },
+  "fade" : {
+    "type" : "scale",
+    "description" : "Fade Transition",
+    "min" : 0.00,
+    "max" : 1.0,
+    "default" : 0.0,
+    "step" : 0.05
+  },
+  "sep1": {
+    "type": "separator"
+  },
+  "header2" : {
+    "type" : "header",
+    "description" : "Effects"
+  },
+  "transitionEffect": {
+    "type": "combobox",
+    "description": "Transition Effect",
+    "default": "Slide",
+    "options": {
+      "Card Deck": "Deck",
+      "Flip": "Flip",
+      "Slide": "Slide"
+    }
+  },
+  "rotateEffect": {
+    "type": "combobox",
+    "description": "Transition Easing",
+    "default": "Expo",
+    "options": {
+      "Quad": "Quad",
+      "Cubic": "Cubic",
+      "Quart": "Quart",
+      "Quint": "Quint",
+      "Sine": "Sine",
+      "Expo": "Expo",
+      "Circ": "Circ",
+      "Elastic": "Elastic",
+      "Back": "Back",
+      "Bounce": "Bounce"
+    }
+  },
+  "easeMidpoint": {
+    "type": "checkbox",
+    "description": "Ease into midpoint",
+    "default": false
+  }
+}

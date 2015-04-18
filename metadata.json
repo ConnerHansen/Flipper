@@ -1,0 +1,14 @@
+{
+    "last-edited": "1395875196",
+    "cinnamon-version": [
+        "2.0",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+    ],
+    "url": "http://cinnamon-spices.linuxmint.com/",
+    "uuid": "Flipper@connerdev",
+    "name": "Flipper",
+    "description": "Fancy workspace switching extension"
+}
