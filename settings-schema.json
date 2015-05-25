@@ -11,14 +11,6 @@
     "default": 500,
     "step" : 25
   },
-  "maxAngle" : {
-    "type" : "scale",
-    "description" : "Rotation Angle",
-    "min" : 0,
-    "max" : 180,
-    "default": 180,
-    "step" : 5
-  },
   "pullaway" : {
     "type" : "scale",
     "description" : "Zoom Amount",

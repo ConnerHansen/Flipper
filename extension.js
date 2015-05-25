@@ -83,9 +83,17 @@ Flipper.prototype = {
     },
 
     const: {
+      CUBE_HALF_ANGLE: 20,
+      CUBE_FULL_ANGLE: 50,
+      CUBE_START_ANGLE: 25,
+      CUBE_HALF_ZOOM: 0.6,
+      CUBE_ZOOM: 0.2,
       DECK_DROP: 5,
       DECK_HEIGHT: 20,
-      DECK_ANGLE: 15
+      DECK_ANGLE: 15,
+      FLIP_ANGLE: 150,
+      ROLODEX_HALF_ANGLE: 30,
+      ROLODEX_FULL_ANGLE: 60,
     },
 
     removeWindowActor: function(workspace_clone, window, index) {
@@ -363,18 +371,7 @@ Flipper.prototype = {
 
         this.last_direction = direction;
 
-        // this.brightnessEffect = new Clutter.BrightnessContrastEffect();
-        // this.actor.add_effect(this.brightnessEffect);
-
-        // global.log("this.brightnessEffect is null? " + (this.brightnessEffect == null));
-        // this.brightnessEffect.set_brightness(-0.2);
-        // global.log("Keys: " + this.brightnessEffect.toString());
-        // global.log("Brightness: " + this.brightnessEffect.get_brightness());
-
         this.new_workspace = new_workspace;
-        // new_workspace.activate(global.get_current_time());
-        // this.sortWindowClones(this.from);
-        // this.sortWindowClones(this.to);
         this.prepare(from_workspace, to_workspace, direction, needScale);
     },
 
@@ -411,60 +408,25 @@ Flipper.prototype = {
       return settings.animationTime / 2000;
     },
 
-    /*
-    _onOpacityChange: function(actor, event) {
-        if (actor.meta_window.minimized) return;
-        let opacity = actor.opacity;
-        let factor = 0.064 - opacity/4000;
-        if (opacity < 255){
-            if (!actor._opacityFix_BrightnessEffect){
-                actor._opacityFix_BrightnessEffect = new Clutter.BrightnessContrastEffect();
-                actor.add_effect_with_name('bightness', actor._opacityFix_BrightnessEffect);
-            }
-            actor._opacityFix_BrightnessEffect.set_brightness(factor);
-            actor._opacityFix_BrightnessEffect.set_contrast(factor);
-        }
-        else if (actor._opacityFix_BrightnessEffect){
-            actor.remove_effect(actor._opacityFix_BrightnessEffect);
-            actor._opacityFix_BrightnessEffect = 0;
-        }
-    },
-    */
-
     prepare: function(from, to, direction, needScale) {
       from.raise_top();
       from.show();
       to.show();
-      // to.hide();
-
-      let x_pos = this.monitor.width/2;
-      if (direction == Meta.MotionDirection.LEFT) {
-          from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-
-          to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-          from.set_position(x_pos, this.monitor.height/2);
-          to.set_position(x_pos, this.monitor.height/2);
-          to.rotation_angle_y = -settings.maxAngle;
-      } else {
-          from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-
-          to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-          from.set_position(x_pos, this.monitor.height/2);
-          to.set_position(x_pos, this.monitor.height/2);
-          to.rotation_angle_y = settings.maxAngle;
-      }
 
       to.set_scale(1,1);
       from.set_scale(1,1);
 
-      if(settings.transitionEffect == "Flip")
+      if(settings.transitionEffect == "Flip") {
         this.flip_start(from, to, direction);
-      else if(settings.transitionEffect == "Slide")
+      } else if(settings.transitionEffect == "Cube"){
+        this.cube_start(from, to, direction);
+      } else if(settings.transitionEffect == "Slide"){
         this.slide_start(from, to, direction);
-      else if(settings.transitionEffect == "Deck")
+      } else if(settings.transitionEffect == "Deck"){
         this.deck_start(from, to, direction);
-      else if(settings.transitionEffect == "Rolodex")
+      } else if(settings.transitionEffect == "Rolodex"){
         this.rolodex_start(from, to, direction);
+      }
     },
 
     ///////////////////////////////////////////
@@ -476,11 +438,11 @@ Flipper.prototype = {
       let x_pos;
 
       if (direction == Meta.MotionDirection.LEFT) {
-          angle_from = settings.maxAngle;
+          angle_from = this.const.FLIP_ANGLE;
           angle_to = 0;
           x_pos = this.monitor.width / 2;
       } else {
-          angle_from = -settings.maxAngle;
+          angle_from = -this.const.FLIP_ANGLE;
           angle_to = 0;
           x_pos = this.monitor.width / 2;
       }
@@ -497,8 +459,8 @@ Flipper.prototype = {
           onCompleteScope: this
       });
 
-      to.show();
       from.hide();
+      to.show();
       this.new_workspace.activate(global.get_current_time());
       Main.wm.showWorkspaceOSD();
     },
@@ -508,14 +470,28 @@ Flipper.prototype = {
       let angle_to;
       let x_pos;
 
+      to.hide();
+
       if (direction == Meta.MotionDirection.LEFT) {
-          angle_from = settings.maxAngle;
-          angle_to = 0;
-          x_pos = this.monitor.width / 2;
+        angle_from = this.const.FLIP_ANGLE;
+        angle_to = 0;
+        x_pos = this.monitor.width / 2;
+
+        from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
+        to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
+
+        from.set_position(x_pos, this.monitor.height/2);
+        to.set_position(x_pos, this.monitor.height/2);
       } else {
-          angle_from = -settings.maxAngle;
-          angle_to = 0;
-          x_pos = this.monitor.width / 2;
+        angle_from = -this.const.FLIP_ANGLE;
+        angle_to = 0;
+        x_pos = this.monitor.width / 2;
+
+        from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
+        to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
+
+        from.set_position(x_pos, this.monitor.height/2);
+        to.set_position(x_pos, this.monitor.height/2);
       }
 
       Tweener.addTween(from, {
@@ -658,6 +634,7 @@ Flipper.prototype = {
       } else {
         Tweener.addTween(from, {
             x: -this.monitor.width,
+            brightness: 1.0,
             scale_x: this.getScale(),
             scale_y: this.getScale(),
             opacity: 255 * (1.0 - settings.fade),
@@ -687,7 +664,8 @@ Flipper.prototype = {
         to.rotation_angle_y = -this.const.DECK_ANGLE;
 
         toTransition = -this.monitor.width/2;
-        // to.set_scale(0, 0);
+        to.set_scale(this.getScale(), this.getScale());
+
         Tweener.addTween(to, {
             x: toTransition,
             opacity: 255 * (1.0 - settings.fade),
@@ -724,6 +702,137 @@ Flipper.prototype = {
     },
 
     ///////////////////////////////////////////
+    // CUBE
+    ///////////////////////////////////////////
+    cube_end: function(from, to, direction) {
+      let toTransition;
+      let fromTransition;
+      this.new_workspace.activate(global.get_current_time());
+      to.raise_top();
+
+      if (direction == Meta.MotionDirection.LEFT) {
+        Tweener.addTween(to, {
+            opacity: 255,
+            scale_x: 1,
+            scale_y: 1,
+            transition: this.getEasing(false),
+            rotation_angle_y: 0,
+            time: this.getTime(),
+            onComplete: this.unsetIsAnimating,
+            onCompleteScope: this
+        });
+        Tweener.addTween(from, {
+            // x: -this.monitor.width,
+            opacity: settings.fade,
+            scale_x: this.const.CUBE_ZOOM,
+            scale_y: this.const.CUBE_ZOOM,
+            transition: this.getEasing(false),
+            rotation_angle_y: this.const.CUBE_FULL_ANGLE
+        });
+      } else {
+        Tweener.addTween(to, {
+            opacity: 255,
+            scale_x: 1,
+            scale_y: 1,
+            transition: this.getEasing(false),
+            rotation_angle_y: 0,
+            time: this.getTime(),
+            onComplete: this.unsetIsAnimating,
+            onCompleteScope: this
+        });
+        Tweener.addTween(from, {
+            opacity: settings.fade,
+            scale_x: this.const.CUBE_ZOOM,
+            scale_y: this.const.CUBE_ZOOM,
+            transition: this.getEasing(false),
+            rotation_angle_y: -this.const.CUBE_FULL_ANGLE
+        });
+      }
+
+      Main.wm.showWorkspaceOSD();
+    },
+
+    cube_start: function(from, to, direction) {
+      let toTransition;
+      let fromTransition;
+
+      from.show();
+      to.show();
+
+      if (direction == Meta.MotionDirection.LEFT) {
+        from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+        to.move_anchor_point_from_gravity(Clutter.Gravity.EAST);
+
+        from.raise_top();
+        from.set_position(0, this.monitor.height/2 );
+        from.rotation_angle_y = 0;
+
+        to.set_position(this.monitor.width, this.monitor.height/2);
+        to.rotation_angle_y = this.const.CUBE_START_ANGLE;
+        to.set_scale(this.const.CUBE_ZOOM, this.const.CUBE_ZOOM);
+        to.set_opacity(settings.fade);
+
+        toTransition = this.monitor.width/2;
+
+        Tweener.addTween(from, {
+            rotation_angle_y: -this.const.CUBE_HALF_ANGLE,
+            opacity: 255 * (1.0 - settings.fade),
+            scale_x: this.const.CUBE_HALF_ZOOM,
+            scale_y: this.const.CUBE_HALF_ZOOM,
+            transition: this.getEasing(true),
+            time: this.getTime(),
+        });
+
+        Tweener.addTween(to, {
+            rotation_angle_y: this.const.CUBE_HALF_ANGLE,
+            opacity: 255 * (1.0 - settings.fade),
+            scale_x: this.const.CUBE_HALF_ZOOM,
+            scale_y: this.const.CUBE_HALF_ZOOM,
+            transition: this.getEasing(true),
+            time: this.getTime(),
+            onCompleteParams: [from, to, direction],
+            onComplete: this.cube_end,
+            onCompleteScope: this
+        });
+      } else {
+        from.move_anchor_point_from_gravity(Clutter.Gravity.EAST);
+        to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+
+        from.raise_top();
+        from.set_position(this.monitor.width, this.monitor.height/2 );
+        from.rotation_angle_y = 0;
+
+        to.set_position(0, this.monitor.height/2);
+        to.rotation_angle_y = -this.const.CUBE_START_ANGLE;
+        to.set_scale(this.const.CUBE_ZOOM, this.const.CUBE_ZOOM);
+        to.set_opacity(settings.fade);
+
+        toTransition = -this.monitor.width/2;
+
+        Tweener.addTween(from, {
+            rotation_angle_y: this.const.CUBE_HALF_ANGLE,
+            opacity: 255 * (1.0 - settings.fade),
+            scale_x: this.const.CUBE_HALF_ZOOM,
+            scale_y: this.const.CUBE_HALF_ZOOM,
+            transition: this.getEasing(true),
+            time: this.getTime(),
+        });
+
+        Tweener.addTween(to, {
+            rotation_angle_y: -this.const.CUBE_HALF_ANGLE,
+            opacity: 255 * (1.0 - settings.fade),
+            scale_x: this.const.CUBE_HALF_ZOOM,
+            scale_y: this.const.CUBE_HALF_ZOOM,
+            transition: this.getEasing(true),
+            time: this.getTime(),
+            onCompleteParams: [from, to, direction],
+            onComplete: this.cube_end,
+            onCompleteScope: this
+        });
+      }
+    },
+
+    ///////////////////////////////////////////
     // ROLODEX
     ///////////////////////////////////////////
     rolodex_end: function(from, to, direction) {
@@ -735,8 +844,8 @@ Flipper.prototype = {
         Tweener.addTween(to, {
             rotation_angle_y: 0,
             opacity: 255,
-            // scale_x: 1,
-            // scale_y: 1,
+            scale_x: 1,
+            scale_y: 1,
             transition: this.getEasing(false),
             rotation_angle_y: 0,
             time: this.getTime(),
@@ -745,9 +854,9 @@ Flipper.prototype = {
         });
       } else {
         Tweener.addTween(from, {
-            // scale_x: this.getScale(),
-            // scale_y: this.getScale(),
-            rotation_angle_y: -90,
+            scale_x: this.getScale(),
+            scale_y: this.getScale(),
+            rotation_angle_y: -this.const.ROLODEX_FULL_ANGLE,
             opacity: 255 * (1.0 - settings.fade),
             transition: this.getEasing(false),
             time: this.getTime(),
@@ -760,11 +869,11 @@ Flipper.prototype = {
     },
 
     rolodex_start: function(from, to, direction) {
-      from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
-      to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
-
       let toTransition;
       let fromTransition;
+
+      from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+      to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
 
       if (direction == Meta.MotionDirection.LEFT) {
         to.raise_top();
@@ -772,19 +881,20 @@ Flipper.prototype = {
         from.rotation_angle_y = 0;
 
         to.set_position(0, this.monitor.height/2);
-        to.rotation_angle_y = -90;
+        to.rotation_angle_y = -this.const.ROLODEX_FULL_ANGLE;
+        to.set_opacity = settings.fade;
 
-        toTransition = -this.monitor.width/2;
-        // to.set_scale(0, 0);
+        to.set_scale(this.getScale(), this.getScale());
+
         Tweener.addTween(to, {
-            rotation_angle_y: -45,
+            rotation_angle_y: -this.const.ROLODEX_HALF_ANGLE,
             opacity: 255 * (1.0 - settings.fade),
-            // scale_x: this.getHalfScale(),
-            // scale_y: this.getHalfScale(),
+            scale_x: this.getHalfScale(),
+            scale_y: this.getHalfScale(),
             transition: this.getEasing(true),
             time: this.getTime(),
             onCompleteParams: [from, to, direction],
-            onComplete: this.deck_end,
+            onComplete: this.rolodex_end,
             onCompleteScope: this
         });
       } else {
@@ -796,93 +906,17 @@ Flipper.prototype = {
 
         Tweener.addTween(from, {
             y: this.monitor.height/2 - this.const.DECK_HEIGHT,
-            // scale_x: this.getHalfScale(),
-            // scale_y: this.getHalfScale(),
-            rotation_angle_y: -45,
+            scale_x: this.getHalfScale(),
+            scale_y: this.getHalfScale(),
+            rotation_angle_y: -this.const.ROLODEX_HALF_ANGLE,
             opacity: 255 * (1.0 - settings.fade),
             transition: this.getEasing(true),
             time: this.getTime(),
             onCompleteParams: [from, to, direction],
-            onComplete: this.deck_end,
+            onComplete: this.rolodex_end,
             onCompleteScope: this
         });
       }
-    },
-
-    ///////////////////////////////////////////
-    // ROTATION
-    ///////////////////////////////////////////
-    rotate_mid: function(from, to, direction) {
-        let angle_from;
-        let angle_to;
-        let x_pos;
-
-        if (direction == Meta.MotionDirection.LEFT) {
-            angle_from = settings.maxAngle;
-            angle_to = 0;
-            x_pos = this.monitor.width / 2;
-        } else {
-            angle_from = -settings.maxAngle;
-            angle_to = 0;
-            x_pos = this.monitor.width / 2;
-        }
-
-        Tweener.addTween(from, {
-            x: x_pos,
-            scale_x: settings.pullaway,
-            scale_y: settings.pullaway,
-            opacity: 255 * (1.0 - settings.fade),
-            // opacity: 255,
-            rotation_angle_y: angle_from/2,
-            transition: this.getEasing(true),
-            time: this.getTime(),
-        });
-
-        Tweener.addTween(to, {
-            x: x_pos,
-            opacity: 255 * (1.0 - settings.fade),
-            scale_x: settings.pullaway,
-            scale_y: settings.pullaway,
-            rotation_angle_y: -angle_from/2,
-            transition: this.getEasing(true),
-            time: this.getTime(),
-            onCompleteParams: [from, to, direction],
-            onComplete: this.rotate_end,
-            onCompleteScope: this,
-        });
-    },
-
-    rotate_end: function(from, to, direction) {
-        let angle_from;
-        let angle_to;
-        let x_pos;
-
-        if (direction == Meta.MotionDirection.LEFT) {
-            angle_from = settings.maxAngle;
-            angle_to = 0;
-            x_pos = this.monitor.width / 2;
-        } else {
-            angle_from = -settings.maxAngle;
-            angle_to = 0;
-            x_pos = this.monitor.width / 2;
-        }
-
-        Tweener.addTween(to, {
-            x: x_pos,
-            opacity: 255,
-            scale_x: 1.0,
-            scale_y: 1.0,
-            rotation_angle_y: angle_to,
-            transition: this.getEasing(false),
-            time: this.getTime(),
-            onComplete: this.unsetIsAnimating,
-            onCompleteScope: this
-        });
-
-        to.show();
-        from.hide();
-        this.new_workspace.activate(global.get_current_time());
-        Main.wm.showWorkspaceOSD();
     },
 
     unsetIsAnimating: function() {
@@ -907,7 +941,7 @@ Flipper.prototype = {
         case Meta.KeyBindingAction.MOVE_TO_WORKSPACE_LEFT:
           this.direction = Meta.MotionDirection.LEFT;
           workspace = global.screen.get_active_workspace().index();
-          windows = this.getWorkspaceWindows(workspace)
+          windows = this.getWorkspaceWindows(workspace);
           this.startAnimate(this.direction, window);
           break;
 
@@ -1021,12 +1055,7 @@ FlipperSettings.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "transitionEffect", "transitionEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
-            "rotateEffect", "rotateEffect", function(effect){
-              global.log("Effect: " + effect);
-              global.log("Arguments: " + arguments.toString());
-            });
-        this.settings.bindProperty(Settings.BindingDirection.IN,
-            "maxAngle", "maxAngle", function(){});
+            "rotateEffect", "rotateEffect", function(){});
     }
 }
 
