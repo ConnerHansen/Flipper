@@ -6,7 +6,7 @@
         "2.3",
         "2.4"
     ],
-    "url": "http://cinnamon-spices.linuxmint.com/",
+    "url": "https://github.com/ConnerHansen/Flipper",
     "uuid": "Flipper@connerdev",
     "name": "Flipper",
     "description": "Fancy workspace switching extension"
