@@ -82,6 +82,12 @@ Flipper.prototype = {
         this.actor.show();
     },
 
+    const: {
+      DECK_DROP: 5,
+      DECK_HEIGHT: 20,
+      DECK_ANGLE: 15
+    },
+
     removeWindowActor: function(workspace_clone, window, index) {
         if (workspace_clone && (workspace_clone.index == index)) {
             let i = workspace_clone.workspaceWindows.indexOf(window);
@@ -457,8 +463,13 @@ Flipper.prototype = {
         this.slide_start(from, to, direction);
       else if(settings.transitionEffect == "Deck")
         this.deck_start(from, to, direction);
+      else if(settings.transitionEffect == "Rolodex")
+        this.rolodex_start(from, to, direction);
     },
 
+    ///////////////////////////////////////////
+    // FLIP
+    ///////////////////////////////////////////
     flip_end: function(from, to, direction) {
       let angle_from;
       let angle_to;
@@ -531,6 +542,9 @@ Flipper.prototype = {
       });
     },
 
+    ///////////////////////////////////////////
+    // SLIDE
+    ///////////////////////////////////////////
     slide_end: function(from, to, direction) {
       let toTransition;
       let fromTransition;
@@ -620,6 +634,9 @@ Flipper.prototype = {
       });
     },
 
+    ///////////////////////////////////////////
+    // DECK
+    ///////////////////////////////////////////
     deck_end: function(from, to, direction) {
       let toTransition;
       let fromTransition;
@@ -628,10 +645,12 @@ Flipper.prototype = {
       if (direction == Meta.MotionDirection.LEFT) {
         Tweener.addTween(to, {
             x: 0,
+            y: this.monitor.height/2,
             opacity: 255,
             scale_x: 1,
             scale_y: 1,
             transition: this.getEasing(false),
+            rotation_angle_y: 0,
             time: this.getTime(),
             onComplete: this.unsetIsAnimating,
             onCompleteScope: this
@@ -661,14 +680,14 @@ Flipper.prototype = {
 
       if (direction == Meta.MotionDirection.LEFT) {
         to.raise_top();
-        from.set_position(0, this.monitor.height/2);
-        from.rotation_angle_y = 0
+        from.set_position(0, this.monitor.height/2 );
+        from.rotation_angle_y = 0;
 
-        to.set_position(-this.monitor.width, this.monitor.height/2);
-        to.rotation_angle_y = 0
+        to.set_position(-this.monitor.width, this.monitor.height/2 - this.const.DECK_HEIGHT);
+        to.rotation_angle_y = -this.const.DECK_ANGLE;
 
         toTransition = -this.monitor.width/2;
-        to.set_scale(0, 0);
+        // to.set_scale(0, 0);
         Tweener.addTween(to, {
             x: toTransition,
             opacity: 255 * (1.0 - settings.fade),
@@ -690,8 +709,10 @@ Flipper.prototype = {
         fromTransition = -this.monitor.width/2;
         Tweener.addTween(from, {
             x: fromTransition,
+            y: this.monitor.height/2 - this.const.DECK_HEIGHT,
             scale_x: this.getHalfScale(),
             scale_y: this.getHalfScale(),
+            rotation_angle_y: -this.const.DECK_ANGLE,
             opacity: 255 * (1.0 - settings.fade),
             transition: this.getEasing(true),
             time: this.getTime(),
@@ -702,6 +723,95 @@ Flipper.prototype = {
       }
     },
 
+    ///////////////////////////////////////////
+    // ROLODEX
+    ///////////////////////////////////////////
+    rolodex_end: function(from, to, direction) {
+      let toTransition;
+      let fromTransition;
+      this.new_workspace.activate(global.get_current_time());
+
+      if (direction == Meta.MotionDirection.LEFT) {
+        Tweener.addTween(to, {
+            rotation_angle_y: 0,
+            opacity: 255,
+            // scale_x: 1,
+            // scale_y: 1,
+            transition: this.getEasing(false),
+            rotation_angle_y: 0,
+            time: this.getTime(),
+            onComplete: this.unsetIsAnimating,
+            onCompleteScope: this
+        });
+      } else {
+        Tweener.addTween(from, {
+            // scale_x: this.getScale(),
+            // scale_y: this.getScale(),
+            rotation_angle_y: -90,
+            opacity: 255 * (1.0 - settings.fade),
+            transition: this.getEasing(false),
+            time: this.getTime(),
+            onComplete: this.unsetIsAnimating,
+            onCompleteScope: this
+        });
+      }
+
+      Main.wm.showWorkspaceOSD();
+    },
+
+    rolodex_start: function(from, to, direction) {
+      from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+      to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+
+      let toTransition;
+      let fromTransition;
+
+      if (direction == Meta.MotionDirection.LEFT) {
+        to.raise_top();
+        from.set_position(0, this.monitor.height/2 );
+        from.rotation_angle_y = 0;
+
+        to.set_position(0, this.monitor.height/2);
+        to.rotation_angle_y = -90;
+
+        toTransition = -this.monitor.width/2;
+        // to.set_scale(0, 0);
+        Tweener.addTween(to, {
+            rotation_angle_y: -45,
+            opacity: 255 * (1.0 - settings.fade),
+            // scale_x: this.getHalfScale(),
+            // scale_y: this.getHalfScale(),
+            transition: this.getEasing(true),
+            time: this.getTime(),
+            onCompleteParams: [from, to, direction],
+            onComplete: this.deck_end,
+            onCompleteScope: this
+        });
+      } else {
+        from.set_position(0, this.monitor.height/2);
+        from.rotation_angle_y = 0;
+
+        to.set_position(0, this.monitor.height/2);
+        to.rotation_angle_y = 0;
+
+        Tweener.addTween(from, {
+            y: this.monitor.height/2 - this.const.DECK_HEIGHT,
+            // scale_x: this.getHalfScale(),
+            // scale_y: this.getHalfScale(),
+            rotation_angle_y: -45,
+            opacity: 255 * (1.0 - settings.fade),
+            transition: this.getEasing(true),
+            time: this.getTime(),
+            onCompleteParams: [from, to, direction],
+            onComplete: this.deck_end,
+            onCompleteScope: this
+        });
+      }
+    },
+
+    ///////////////////////////////////////////
+    // ROTATION
+    ///////////////////////////////////////////
     rotate_mid: function(from, to, direction) {
         let angle_from;
         let angle_to;
@@ -774,39 +884,6 @@ Flipper.prototype = {
         this.new_workspace.activate(global.get_current_time());
         Main.wm.showWorkspaceOSD();
     },
-
-    /*bounce: function(workspace, direction) {
-        this.is_animating = true;
-        this.from.hide();
-
-        workspace.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-        workspace.x = this.monitor.width / 2;
-
-        let angle;
-        if (direction == Meta.MotionDirection.LEFT)
-            angle = 3;
-        else
-            angle = -3;
-
-        Tweener.addTween(workspace, {
-            rotation_angle_y: angle,
-            transition: 'easeInQuad',
-            time: settings.animationTime * 0.75,
-            onComplete: this.bounceBack,
-            onCompleteScope: this,
-            onCompleteParams: [workspace, direction],
-        });
-    },
-
-    bounceBack: function(workspace, direction) {
-        Tweener.addTween(workspace, {
-            rotation_angle_y: 0,
-            transition: 'easeOutQuad',
-            time: settings.animationTime * 0.75,
-            onComplete: this.unsetIsAnimating,
-            onCompleteScope: this,
-        });
-    },*/
 
     unsetIsAnimating: function() {
       this.from.hide();
