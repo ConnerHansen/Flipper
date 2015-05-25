@@ -1,3 +1,9 @@
+/*
+ * Flipper is based on the Desktop Cube extension by Entelechy
+ * Author: Conner Hansen
+ * Last Update: May 24, 2015
+ */
+
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const St = imports.gi.St;
@@ -24,6 +30,7 @@ Flipper.prototype = {
         this.to = null;
         this.is_animating = false;
         this.destroy_requested = false;
+        this.queued_direction = null;
         this.monitor = Main.layoutManager.primaryMonitor;
 
         let [binding_type,,,direction] = binding.get_name().split('-');
@@ -41,7 +48,7 @@ Flipper.prototype = {
             return;
 
         this.actor = new St.Group({
-            reactive: true,
+            reactive: false,
             x: 0,
             y: 0,
             width: global.screen_width,
@@ -70,6 +77,7 @@ Flipper.prototype = {
         if (binding_type == "move" &&
             window.get_window_type() !== Meta.WindowType.DESKTOP)
                 this.moveWindow(window, direction);
+
         this.startAnimate(direction);
         this.actor.show();
     },
@@ -299,6 +307,8 @@ Flipper.prototype = {
     },
 
     startAnimate: function(direction, window) {
+      global.log("starting to animate in direction " + direction);
+
       // Main.wm.showWorkspaceOSD();
         let active_workspace = global.screen.get_active_workspace();
         let new_workspace = active_workspace.get_neighbor(direction);
@@ -308,13 +318,13 @@ Flipper.prototype = {
         let from_workspace;
         let to_workspace;
         let needScale = false;
+        this.is_animating = true;
 
         if (this.to != null) {
             from_workspace = this.to;
             needScale = false;
             if (active_workspace.index() == new_workspace.index()) {
                 //this.bounce(from_workspace, direction);
-                this.is_animating = true;
                 this.from.hide();
 
                 this.unsetIsAnimating();
@@ -344,8 +354,6 @@ Flipper.prototype = {
 
         this.from.set_opacity(255);
         this.to.set_opacity(255);
-        // this.to.set_opacity(255 * (1.0 - settings.fade));
-        // this.to.hide();
 
         this.last_direction = direction;
 
@@ -369,7 +377,6 @@ Flipper.prototype = {
       var dir;
 
       if(settings.easeMidpoint) {
-        // dir = "easeInOut";
         dir = (animationStart) ? "easeOut" : "easeIn";
       } else {
         dir = (animationStart) ? "easeIn" : "easeOut";
@@ -392,11 +399,31 @@ Flipper.prototype = {
 
     getTime: function() {
       if(this.hurry) {
-        return settings.animationTime / 6000;
+        return settings.animationTime / 3000;
       }
 
       return settings.animationTime / 2000;
     },
+
+    /*
+    _onOpacityChange: function(actor, event) {
+        if (actor.meta_window.minimized) return;
+        let opacity = actor.opacity;
+        let factor = 0.064 - opacity/4000;
+        if (opacity < 255){
+            if (!actor._opacityFix_BrightnessEffect){
+                actor._opacityFix_BrightnessEffect = new Clutter.BrightnessContrastEffect();
+                actor.add_effect_with_name('bightness', actor._opacityFix_BrightnessEffect);
+            }
+            actor._opacityFix_BrightnessEffect.set_brightness(factor);
+            actor._opacityFix_BrightnessEffect.set_contrast(factor);
+        }
+        else if (actor._opacityFix_BrightnessEffect){
+            actor.remove_effect(actor._opacityFix_BrightnessEffect);
+            actor._opacityFix_BrightnessEffect = 0;
+        }
+    },
+    */
 
     prepare: function(from, to, direction, needScale) {
       from.raise_top();
@@ -406,24 +433,14 @@ Flipper.prototype = {
 
       let x_pos = this.monitor.width/2;
       if (direction == Meta.MotionDirection.LEFT) {
-          // let x_pos = 0;
-          // if (!needScale)
-          //     x_pos = this.monitor.width * settings.pullaway;
-          // x_pos = this.monitor.width;
           from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-          // from.set_position(x_pos, this.monitor.height);
 
           to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
           from.set_position(x_pos, this.monitor.height/2);
           to.set_position(x_pos, this.monitor.height/2);
           to.rotation_angle_y = -settings.maxAngle;
       } else {
-          // let x_pos = 0;
-          // if (!needScale)
-          //     x_pos = x_pos * (1 - settings.pullaway);
-          // x_pos = x_pos;
           from.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
-          // from.set_position(x_pos, this.monitor.height / 2);
 
           to.move_anchor_point_from_gravity(Clutter.Gravity.CENTER);
           from.set_position(x_pos, this.monitor.height/2);
@@ -431,12 +448,6 @@ Flipper.prototype = {
           to.rotation_angle_y = settings.maxAngle;
       }
 
-      // to.set_scale(1 - 2*settings.pullaway, 1 - 2*settings.pullaway);
-      // from.raise_top();
-      // if (needScale)
-      //     this.scale(from, to, direction);
-      // else
-      // this.rotate_mid(from, to, direction);
       to.set_scale(1,1);
       from.set_scale(1,1);
 
@@ -448,37 +459,7 @@ Flipper.prototype = {
         this.deck_start(from, to, direction);
     },
 
-    scale: function(from, to, direction) {
-        this.is_animating = true;
-
-        // let x_pos;
-        // if (direction == Meta.MotionDirection.LEFT) {
-        //     x_pos = this.monitor.width * settings.pullaway;
-        // } else {
-        //     x_pos = this.monitor.width * (1 - settings.pullaway);
-        // }
-        //
-        // if (settings.pullaway > 0.2) {
-            // this.setDesktopClonesVisible(from, false);
-            // this.setDesktopClonesVisible(to, false);
-        // }
-        // Tweener.addTween(from, {
-        //     scale_center_x: 1 - 2*settings.pullaway,
-        //     scale_center_y: 1 - 2*settings.pullaway,
-        //     x: x_pos,
-        //     transition: settings.scaleEffect,
-        //     time: settings.animationTime,
-        //     onCompleteParams: [from, to, direction],
-        //     onComplete: this.rotate_mid,
-        //     onCompleteScope: this,
-        // });
-
-        this.rotate_mid(from, to, direction);
-    },
-
     flip_end: function(from, to, direction) {
-      this.is_animating = false;
-
       let angle_from;
       let angle_to;
       let x_pos;
@@ -512,8 +493,6 @@ Flipper.prototype = {
     },
 
     flip_start: function(from, to, direction) {
-      this.is_animating = true;
-
       let angle_from;
       let angle_to;
       let x_pos;
@@ -553,8 +532,6 @@ Flipper.prototype = {
     },
 
     slide_end: function(from, to, direction) {
-      this.is_animating = false;
-
       let toTransition;
       let fromTransition;
       to.raise_top();
@@ -590,7 +567,6 @@ Flipper.prototype = {
     },
 
     slide_start: function(from, to, direction) {
-      this.is_animating = true;
       to.raise_top();
 
       from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
@@ -645,8 +621,6 @@ Flipper.prototype = {
     },
 
     deck_end: function(from, to, direction) {
-      this.is_animating = false;
-
       let toTransition;
       let fromTransition;
       this.new_workspace.activate(global.get_current_time());
@@ -679,8 +653,6 @@ Flipper.prototype = {
     },
 
     deck_start: function(from, to, direction) {
-      this.is_animating = true;
-
       from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
       to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
 
@@ -731,14 +703,6 @@ Flipper.prototype = {
     },
 
     rotate_mid: function(from, to, direction) {
-        this.is_animating = true;
-        // this.setDesktopClonesVisible(from, false);
-        // this.setDesktopClonesVisible(to, false);
-        // from.hide();
-        // to.raise_top();
-        // to.show();
-        // to.hide();
-
         let angle_from;
         let angle_to;
         let x_pos;
@@ -753,30 +717,6 @@ Flipper.prototype = {
             x_pos = this.monitor.width / 2;
         }
 
-        // Tweener.addTween(from, {
-        //     x: x_pos,
-        //     // opacity: 128,
-        //     // opacity: 255,
-        //     rotation_angle_y: angle_from,
-        //     transition: settings.rotateEffect,
-        //     time: settings.animationTime/1000,
-        // });
-        //
-        // // Tweener.addTween(this.brightnessEffect, {
-        // //     brightness: 0
-        // // });
-        //
-        // Tweener.addTween(to, {
-        //     x: x_pos,
-        //     // opacity: 255,
-        //     rotation_angle_y: angle_to,
-        //     transition: settings.rotateEffect,
-        //     time: settings.animationTime/1000,
-        //     // onCompleteParams: [from, to, direction],
-        //     onComplete: this.unsetIsAnimating,
-        //     onCompleteScope: this,
-        // });
-
         Tweener.addTween(from, {
             x: x_pos,
             scale_x: settings.pullaway,
@@ -787,18 +727,6 @@ Flipper.prototype = {
             transition: this.getEasing(true),
             time: this.getTime(),
         });
-
-        // Tweener.addTween(this.brightnessEffect, {
-        //   brightness: -1.0,
-        //   transition: settings.rotateEffect,
-        //   time: settings.animationTime/2000
-        // });
-
-        // this.brightnessEffect.set_brightness(-1.0);
-
-        // Tweener.addTween(this.brightnessEffect, {
-        //     brightness: 0
-        // });
 
         Tweener.addTween(to, {
             x: x_pos,
@@ -815,14 +743,6 @@ Flipper.prototype = {
     },
 
     rotate_end: function(from, to, direction) {
-        this.is_animating = false;
-        // this.setDesktopClonesVisible(from, false);
-        // this.setDesktopClonesVisible(to, false);
-        // from.show();
-        // this.brightnessEffect.set_brightness(1.0);
-        // this.actor.remove_effect(this.brightnessEffect);
-        // to.raise_top();
-
         let angle_from;
         let angle_to;
         let x_pos;
@@ -837,14 +757,6 @@ Flipper.prototype = {
             x_pos = this.monitor.width / 2;
         }
 
-        // Tweener.addTween(from, {
-        //     x: x_pos,
-        //     // opacity: 255,
-        //     // opacity: 0,
-        //     rotation_angle_y: angle_from,
-        //     transition: settings.unrotateEffect,
-        //     time: settings.animationTime/2000,
-        // });
         Tweener.addTween(to, {
             x: x_pos,
             opacity: 255,
@@ -861,70 +773,6 @@ Flipper.prototype = {
         from.hide();
         this.new_workspace.activate(global.get_current_time());
         Main.wm.showWorkspaceOSD();
-    },
-
-    // rotate_end: function(from, to, direction) {
-    //     from.hide();
-    //     to.raise_top();
-    //     to.show();
-    //     let x_pos;
-    //     let angle_from;
-    //     if (direction == Meta.MotionDirection.LEFT) {
-    //         x_pos = 0;
-    //         angle_from = 180;
-    //     } else {
-    //         x_pos = 0;
-    //         angle_from = -180;
-    //     }
-    //
-    //     Tweener.addTween(from, {
-    //         x: x_pos,
-    //         rotation_angle_y: angle_from,
-    //         transition: settings.unrotateEffect,
-    //         time: settings.animationTime,
-    //     });
-    //
-    //     Tweener.addTween(to, {
-    //         x: x_pos,
-    //         rotation_angle_y: 0,
-    //         transition: settings.unrotateEffect,
-    //         time: settings.animationTime,
-    //         onComplete: this.unsetIsAnimating,
-    //         onCompleteScope: this,
-    //     });
-    // },
-
-    unscale: function(from, to, direction) {
-        // from.hide();
-
-        // let x_pos;
-        // if (direction == Meta.MotionDirection.LEFT) {
-        //     to.move_anchor_point_from_gravity(Clutter.Gravity.EAST);
-        //     to.set_position(this.monitor.width * (1 - settings.pullaway),
-        //         this.monitor.height / 2);
-        //     x_pos = this.monitor.width;
-        // } else {
-        //     to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
-        //     to.set_position(this.monitor.width * settings.pullaway,
-        //         this.monitor.height / 2);
-        //     x_pos = 0;
-        // }
-        //
-        // if (settings.pullaway > 0.2) {
-        //     this.setDesktopClonesVisible(from, true);
-        //     this.setDesktopClonesVisible(to, true);
-        // }
-        // Tweener.addTween(to, {
-        //     scale_center_x: 1.0,
-        //     scale_center_y: 1.0,
-        //     x: x_pos,
-        //     transition: settings.unscaleEffect,
-        //     time: settings.animationTime,
-        //     onComplete: this.destroy,
-        //     onCompleteScope: this,
-        // });
-
-        this.destroy();
     },
 
     /*bounce: function(workspace, direction) {
@@ -961,62 +809,64 @@ Flipper.prototype = {
     },*/
 
     unsetIsAnimating: function() {
-        // if (settings.pullaway <= 0.2) {
-            // this.setDesktopClonesVisible(this.from, false);
-            // this.setDesktopClonesVisible(this.to, false);
-        // }
-        // this.from.hide();
+      this.from.hide();
+      // if (this.destroy_requested)
+
+      if( this.queued_action ){
+        this.processKeypress( this.queued_action );
+        this.queued_action = null;
+      } else {
         this.is_animating = false;
-        if (this.destroy_requested)
-            this.onDestroy();
+        this.onDestroy();
+      }
+    },
+
+    processKeypress: function(action) {
+      let workspace;
+      let windows;
+      let window;
+
+      switch(action) {
+        case Meta.KeyBindingAction.MOVE_TO_WORKSPACE_LEFT:
+          this.direction = Meta.MotionDirection.LEFT;
+          workspace = global.screen.get_active_workspace().index();
+          windows = this.getWorkspaceWindows(workspace)
+          this.startAnimate(this.direction, window);
+          break;
+
+        case Meta.KeyBindingAction.MOVE_TO_WORKSPACE_RIGHT:
+          this.direction = Meta.MotionDirection.RIGHT;
+          workspace = global.screen.get_active_workspace().index();
+          windows = this.getWorkspaceWindows(workspace);
+          this.startAnimate(this.direction, window);
+          break;
+
+        case Meta.KeyBindingAction.WORKSPACE_LEFT:
+          this.direction = Meta.MotionDirection.LEFT;
+          this.startAnimate(this.direction);
+          break;
+
+        case Meta.KeyBindingAction.WORKSPACE_RIGHT:
+          this.direction = Meta.MotionDirection.RIGHT;
+          this.startAnimate(this.direction);
+          break;
+      }
     },
 
     _keyPressEvent: function(actor, event) {
-        if (this.is_animating) {
-          this.hurry = true;
-
-          return true;
-        }
-
-        this.hurry = false;
-
-        let workspace;
-        let windows;
-        let window;
-        let event_state = Cinnamon.get_event_state(event);
+      let event_state = Cinnamon.get_event_state(event);
+      if (this.is_animating) {
+        // this.hurry = true;
+        this.queued_action = global.display.get_keybinding_action(event.get_key_code(), event_state);
+      } else {
+        // this.hurry = false;
         let action = global.display.get_keybinding_action
             (event.get_key_code(), event_state);
-        switch(action) {
-        case Meta.KeyBindingAction.MOVE_TO_WORKSPACE_LEFT:
-             this.direction = Meta.MotionDirection.LEFT;
-             workspace = global.screen.get_active_workspace().index();
-             windows = this.getWorkspaceWindows(workspace)
-             window = windows[windows.length - 1];
-             this.moveWindow(window, this.direction);
-                 this.startAnimate(this.direction, window);
-             return true;
 
-        case Meta.KeyBindingAction.MOVE_TO_WORKSPACE_RIGHT:
-             this.direction = Meta.MotionDirection.RIGHT;
-             workspace = global.screen.get_active_workspace().index();
-             windows = this.getWorkspaceWindows(workspace);
-             window = windows[windows.length - 1];
-             this.moveWindow(window, this.direction);
-                 this.startAnimate(this.direction, window);
-             return true;
+        this.processKeypress(action);
+      }
 
-        case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            this.direction = Meta.MotionDirection.LEFT;
-            this.startAnimate(this.direction);
-            return true;
-
-        case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            this.direction = Meta.MotionDirection.RIGHT;
-            this.startAnimate(this.direction);
-            return true;
-        }
-
-        return true;
+      return true;
     },
 
     _keyReleaseEvent: function(actor, event) {
@@ -1024,10 +874,14 @@ Flipper.prototype = {
         let state = mods & this._modifierMask;
 
         if (state == 0) {
-            if (this.is_animating)
-                this.destroy_requested = true;
-            else
-            	this.onDestroy();
+          if (this.is_animating) {
+            global.log("this.is_animating set to true -- destroy requested");
+            this.destroy_requested = true;
+          } else {
+            global.log("this.is_animating set to false -- destroying");
+            this.destroy_requested = true;
+            this.onDestroy();
+          }
         }
 
         return true;
@@ -1053,17 +907,8 @@ Flipper.prototype = {
         });
     },
 
-    /*undimBackground: function() {
-        let background = this._backgroundGroup.get_children()[0];
-        Tweener.addTween(background, {
-            dim_factor: 1.0,
-            time: settings.animationTime,
-            transition: 'easeOutQuad',
-        });
-    },*/
-
     onDestroy: function() {
-        this.unscale(this.from, this.to, this.direction);
+      this.destroy();
     },
 
     destroy: function() {
@@ -1098,15 +943,11 @@ FlipperSettings.prototype = {
             "easeMidpoint", "easeMidpoint", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "transitionEffect", "transitionEffect", function(){});
-        // this.settings.bindProperty(Settings.BindingDirection.IN,
-        //     "unscaleEffect", "unscaleEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "rotateEffect", "rotateEffect", function(effect){
               global.log("Effect: " + effect);
               global.log("Arguments: " + arguments.toString());
             });
-        // this.settings.bindProperty(Settings.BindingDirection.IN,
-        //     "unrotateEffect", "unrotateEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "maxAngle", "maxAngle", function(){});
     }
