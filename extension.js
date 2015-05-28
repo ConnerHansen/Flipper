@@ -87,7 +87,7 @@ Flipper.prototype = {
       CUBE_FULL_ANGLE: 50,
       CUBE_START_ANGLE: 25,
       CUBE_HALF_ZOOM: 0.6,
-      CUBE_ZOOM: 0.2,
+      CUBE_ZOOM: 0.25,
       DECK_DROP: 5,
       DECK_HEIGHT: 20,
       DECK_ANGLE: 15,
@@ -321,72 +321,73 @@ Flipper.prototype = {
     },
 
     startAnimate: function(direction, window) {
-      global.log("starting to animate in direction " + direction);
+      this.is_animating = true;
 
       // Main.wm.showWorkspaceOSD();
-        let active_workspace = global.screen.get_active_workspace();
-        let new_workspace = active_workspace.get_neighbor(direction);
-        let active_index = active_workspace.index();
-        let new_index = new_workspace.index();
+      let active_workspace = global.screen.get_active_workspace();
+      let new_workspace = active_workspace.get_neighbor(direction);
+      let active_index = active_workspace.index();
+      let new_index = new_workspace.index();
 
-        let from_workspace;
-        let to_workspace;
-        let needScale = false;
-        this.is_animating = true;
+      let from_workspace;
+      let to_workspace;
+      let needScale = false;
 
-        if (this.to != null) {
-            from_workspace = this.to;
-            needScale = false;
-            if (active_workspace.index() == new_workspace.index()) {
-                //this.bounce(from_workspace, direction);
-                this.from.hide();
+      if (this.to != null) {
+        from_workspace = this.to;
+        needScale = false;
+        if (active_workspace.index() == new_workspace.index()) {
+          // this.bounce(from_workspace, direction);
+          this.from.hide();
 
-                this.unsetIsAnimating();
-                return;
-            }
-        } else {
-            from_workspace = this.get_workspace_clone(active_workspace.index());
-            this.actor.add_actor(from_workspace);
+          this.unsetIsAnimating();
+          return;
         }
+      } else {
+        from_workspace = this.get_workspace_clone(active_workspace.index());
+        this.actor.add_actor(from_workspace);
+      }
 
-        if (direction == this.last_direction) {
-            if (this.from != null) {
-                to_workspace = this.get_workspace_clone
-                    (new_workspace.index(), direction);
-                this.actor.remove_actor(this.from);
-                this.from.destroy();
-            } else {
-                to_workspace = this.get_workspace_clone(new_workspace.index());
-            }
-            this.actor.add_actor(to_workspace);
+      if (direction == this.last_direction) {
+        if (this.from != null) {
+          to_workspace = this.get_workspace_clone
+              (new_workspace.index(), direction);
+          this.actor.remove_actor(this.from);
+          this.from.destroy();
         } else {
-            to_workspace = this.from;
+          to_workspace = this.get_workspace_clone(new_workspace.index());
         }
+        this.actor.add_actor(to_workspace);
+      } else {
+        to_workspace = this.from;
+      }
 
-        this.from = from_workspace;
-        this.to = to_workspace;
 
-        this.from.set_opacity(255);
-        this.to.set_opacity(255);
+      this.from = from_workspace;
+      this.to = to_workspace;
 
-        this.last_direction = direction;
 
-        this.new_workspace = new_workspace;
-        this.prepare(from_workspace, to_workspace, direction, needScale);
+      this.last_direction = direction;
+
+      this.new_workspace = new_workspace;
+
+      this.prepare(from_workspace, to_workspace, direction, needScale);
     },
 
     getEasing: function(animationStart) {
       var effect = settings.rotateEffect;
       var dir;
 
-      if(settings.easeMidpoint) {
-        dir = (animationStart) ? "easeOut" : "easeIn";
+      // CLone code much? Abstract this shit.
+      if( effect == "EndBounce" ) {
+        effect = (animationStart) ? "easeInCubic" : (this.queued_action) ? "easeOutCubic" : "easeOutBounce";
+      } else if( effect == "EndBack" ) {
+        effect = (animationStart) ? "easeInCubic" : (this.queued_action) ? "easeOutCubic" : "easeOutBack";
+      } else if( effect == "EndElastic" ) {
+        effect = (animationStart) ? "easeInCubic" : (this.queued_action) ? "easeOutCubic" : "easeOutElastic";
       } else {
         dir = (animationStart) ? "easeIn" : "easeOut";
-      }
-
-      if(effect != "Linear") {
-        return dir + effect;
+        effect = dir + effect;
       }
 
       return effect;
@@ -402,7 +403,7 @@ Flipper.prototype = {
 
     getTime: function() {
       if(this.hurry) {
-        return settings.animationTime / 3000;
+        return settings.animationTime / 2500;
       }
 
       return settings.animationTime / 2000;
@@ -840,6 +841,7 @@ Flipper.prototype = {
       let fromTransition;
       this.new_workspace.activate(global.get_current_time());
 
+
       if (direction == Meta.MotionDirection.LEFT) {
         Tweener.addTween(to, {
             rotation_angle_y: 0,
@@ -847,7 +849,6 @@ Flipper.prototype = {
             scale_x: 1,
             scale_y: 1,
             transition: this.getEasing(false),
-            rotation_angle_y: 0,
             time: this.getTime(),
             onComplete: this.unsetIsAnimating,
             onCompleteScope: this
@@ -874,6 +875,7 @@ Flipper.prototype = {
 
       from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
       to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+
 
       if (direction == Meta.MotionDirection.LEFT) {
         to.raise_top();
@@ -905,7 +907,6 @@ Flipper.prototype = {
         to.rotation_angle_y = 0;
 
         Tweener.addTween(from, {
-            y: this.monitor.height/2 - this.const.DECK_HEIGHT,
             scale_x: this.getHalfScale(),
             scale_y: this.getHalfScale(),
             rotation_angle_y: -this.const.ROLODEX_HALF_ANGLE,
@@ -921,13 +922,14 @@ Flipper.prototype = {
 
     unsetIsAnimating: function() {
       this.from.hide();
-      // if (this.destroy_requested)
+      this.is_animating = false;
+
 
       if( this.queued_action ){
-        this.processKeypress( this.queued_action );
+        let action = this.queued_action;
         this.queued_action = null;
-      } else {
-        this.is_animating = false;
+        this.processKeypress( action );
+      } else if( this.destroy_requested ) {
         this.onDestroy();
       }
     },
@@ -965,14 +967,16 @@ Flipper.prototype = {
     },
 
     _keyPressEvent: function(actor, event) {
+      // Make sure we don't accidentally destroy the scene
+      this.destroy_requested = false;
+
       let event_state = Cinnamon.get_event_state(event);
       if (this.is_animating) {
-        // this.hurry = true;
+        this.hurry = true;
         this.queued_action = global.display.get_keybinding_action(event.get_key_code(), event_state);
       } else {
-        // this.hurry = false;
-        let action = global.display.get_keybinding_action
-            (event.get_key_code(), event_state);
+        this.hurry = false;
+        let action = global.display.get_keybinding_action(event.get_key_code(), event_state);
 
         this.processKeypress(action);
       }
@@ -984,12 +988,11 @@ Flipper.prototype = {
         let [_, _, mods] = global.get_pointer();
         let state = mods & this._modifierMask;
 
+
         if (state == 0) {
           if (this.is_animating) {
-            global.log("this.is_animating set to true -- destroy requested");
             this.destroy_requested = true;
           } else {
-            global.log("this.is_animating set to false -- destroying");
             this.destroy_requested = true;
             this.onDestroy();
           }
@@ -1020,15 +1023,16 @@ Flipper.prototype = {
 
     onDestroy: function() {
       this.destroy();
+      this.destroy_requested = false;
     },
 
     destroy: function() {
-        Main.uiGroup.remove_actor(this._backgroundGroup);
-        Main.uiGroup.remove_actor(this.actor);
+      Main.uiGroup.remove_actor(this._backgroundGroup);
+      Main.uiGroup.remove_actor(this.actor);
 
-        Main.getPanels().forEach(function(panel){panel.actor.opacity = 255;});
-        global.window_group.show();
-        this.actor.destroy();
+      Main.getPanels().forEach(function(panel){panel.actor.opacity = 255;});
+      global.window_group.show();
+      this.actor.destroy();
     }
 
 };
@@ -1051,11 +1055,11 @@ FlipperSettings.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "fade", "fade", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
-            "easeMidpoint", "easeMidpoint", function(){});
+            "rotateEffect", "rotateEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "transitionEffect", "transitionEffect", function(){});
-        this.settings.bindProperty(Settings.BindingDirection.IN,
-            "rotateEffect", "rotateEffect", function(){});
+        // this.settings.bindProperty(Settings.BindingDirection.IN,
+        //     "easeDirection", "easeDirection", function(){});
     }
 }
 

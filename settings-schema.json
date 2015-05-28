@@ -55,6 +55,9 @@
       "Bounce": "Bounce",
       "Circ": "Circ",
       "Cubic": "Cubic",
+      "Cubic-Back": "EndBack",
+      "Cubic-Bounce": "EndBounce",
+      "Cubic-Elastic": "EndElastic",
       "Elastic": "Elastic",
       "Expo": "Expo",
       "Sine": "Sine",
@@ -62,10 +65,5 @@
       "Quart": "Quart",
       "Quint": "Quint"
     }
-  },
-  "easeMidpoint": {
-    "type": "checkbox",
-    "description": "Ease into midpoint",
-    "default": false
   }
 }
