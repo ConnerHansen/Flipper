@@ -430,6 +430,10 @@ Flipper.prototype = {
       }
     },
 
+    invert: function() {
+      return (settings.invert) ? -1 : 1;
+    },
+
     ///////////////////////////////////////////
     // FLIP
     ///////////////////////////////////////////
@@ -711,7 +715,7 @@ Flipper.prototype = {
       this.new_workspace.activate(global.get_current_time());
       to.raise_top();
 
-      if (direction == Meta.MotionDirection.LEFT) {
+      if (direction == Meta.MotionDirection.RIGHT) {
         Tweener.addTween(to, {
             opacity: 255,
             scale_x: 1,
@@ -760,7 +764,7 @@ Flipper.prototype = {
       from.show();
       to.show();
 
-      if (direction == Meta.MotionDirection.LEFT) {
+      if (direction == Meta.MotionDirection.RIGHT) {
         from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
         to.move_anchor_point_from_gravity(Clutter.Gravity.EAST);
 
@@ -1058,6 +1062,8 @@ FlipperSettings.prototype = {
             "rotateEffect", "rotateEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "transitionEffect", "transitionEffect", function(){});
+        this.settings.bindProperty(Settings.BindingDirection.IN,
+            "invert", "invert", function(){});
         // this.settings.bindProperty(Settings.BindingDirection.IN,
         //     "easeDirection", "easeDirection", function(){});
     }

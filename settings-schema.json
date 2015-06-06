@@ -65,5 +65,10 @@
       "Quart": "Quart",
       "Quint": "Quint"
     }
+  },
+  "invert" : {
+    "type" : "checkbox",
+    "description" : "Invert Direction",
+    "default" : false
   }
 }
