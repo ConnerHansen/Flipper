@@ -27,6 +27,14 @@
     "default" : 0.0,
     "step" : 0.05
   },
+  "dim_factor" : {
+    "type" : "scale",
+    "description" : "Background Dim Amount",
+    "min" : 0.0,
+    "max" : 1.0,
+    "default" : 0.2,
+    "step" : 0.05
+  },
   "sep1": {
     "type": "separator"
   },
@@ -66,9 +74,9 @@
       "Quint": "Quint"
     }
   },
-  "invert" : {
+  "includeBackground" : {
     "type" : "checkbox",
-    "description" : "Invert Direction",
+    "description" : "Include Background",
     "default" : false
   }
 }

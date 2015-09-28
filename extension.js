@@ -192,10 +192,12 @@ Flipper.prototype = {
         let clone = new St.Group({clip_to_allocation: true});
         clone.set_size(this.monitor.width, this.monitor.height);
 
-        let background = new St.Group();
-        background.add_actor
-            (Meta.BackgroundActor.new_for_screen(global.screen));
-        clone.add_actor(background);
+        if(settings.includeBackground) {
+          let background = new St.Group();
+          background.add_actor
+              (Meta.BackgroundActor.new_for_screen(global.screen));
+          clone.add_actor(background);
+        }
 
         let deskletClone =
             new Clutter.Clone({source : Main.deskletContainer.actor});
@@ -430,10 +432,6 @@ Flipper.prototype = {
       }
     },
 
-    invert: function() {
-      return (settings.invert) ? -1 : 1;
-    },
-
     ///////////////////////////////////////////
     // FLIP
     ///////////////////////////////////////////
@@ -542,7 +540,7 @@ Flipper.prototype = {
           x: fromTransition,
           scale_x: this.getScale(),
           scale_y: this.getScale(),
-          opacity: 255 * (1.0 - settings.fade),
+          opacity: 255 * settings.fade,
           transition: this.getEasing(false),
           time: this.getTime(),
       });
@@ -597,7 +595,7 @@ Flipper.prototype = {
           x: fromTransition,
           scale_x: this.getHalfScale(),
           scale_y: this.getHalfScale(),
-          opacity: 255 * (1.0 - settings.fade),
+          opacity: 255 * settings.fade,
           transition: this.getEasing(true),
           time: this.getTime(),
       });
@@ -670,6 +668,7 @@ Flipper.prototype = {
 
         toTransition = -this.monitor.width/2;
         to.set_scale(this.getScale(), this.getScale());
+        to.set_opacity(0);
 
         Tweener.addTween(to, {
             x: toTransition,
@@ -729,8 +728,8 @@ Flipper.prototype = {
         Tweener.addTween(from, {
             // x: -this.monitor.width,
             opacity: settings.fade,
-            scale_x: this.const.CUBE_ZOOM,
-            scale_y: this.const.CUBE_ZOOM,
+            scale_x: this.const.CUBE_ZOOM * this.getScale(),
+            scale_y: this.const.CUBE_ZOOM * this.getScale(),
             transition: this.getEasing(false),
             rotation_angle_y: this.const.CUBE_FULL_ANGLE
         });
@@ -747,8 +746,8 @@ Flipper.prototype = {
         });
         Tweener.addTween(from, {
             opacity: settings.fade,
-            scale_x: this.const.CUBE_ZOOM,
-            scale_y: this.const.CUBE_ZOOM,
+            scale_x: this.const.CUBE_ZOOM * this.getScale(),
+            scale_y: this.const.CUBE_ZOOM * this.getScale(),
             transition: this.getEasing(false),
             rotation_angle_y: -this.const.CUBE_FULL_ANGLE
         });
@@ -923,6 +922,9 @@ Flipper.prototype = {
         });
       }
     },
+    ///////////////////////////////////////////
+    // END OF ANIMATIONS!
+    ///////////////////////////////////////////
 
     unsetIsAnimating: function() {
       this.from.hide();
@@ -1019,24 +1021,41 @@ Flipper.prototype = {
         this._backgroundGroup.show();
         let background = this._backgroundGroup.get_children()[0];
         Tweener.addTween(background, {
-            dim_factor: 0.0,
-            time: settings.animationTime*0,
-            transition: 'easeOutQuad'
+            dim_factor: settings.dim_factor,
+            time: this.getTime()/2,
+            transition: 'easeInQuad'
         });
     },
 
-    onDestroy: function() {
-      this.destroy();
+    undimBackground: function() {
+      global.log("undimBackground -- undimming");
+      this._backgroundGroup.show();
+      let background = this._backgroundGroup.get_children()[0];
+      Tweener.addTween(background, {
+          dim_factor: 1.0,
+          time: this.getTime()/2,
+          transition: 'easeInQuad',
+          onComplete: this.destroy,
+          onCompleteScope: this
+      });
+
       this.destroy_requested = false;
     },
 
+    onDestroy: function() {
+      this.undimBackground();
+      global.log("onDestroy done");
+    },
+
     destroy: function() {
+      global.log("destroy called");
       Main.uiGroup.remove_actor(this._backgroundGroup);
       Main.uiGroup.remove_actor(this.actor);
 
       Main.getPanels().forEach(function(panel){panel.actor.opacity = 255;});
       global.window_group.show();
       this.actor.destroy();
+      global.log("destroy done");
     }
 
 };
@@ -1063,7 +1082,9 @@ FlipperSettings.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.IN,
             "transitionEffect", "transitionEffect", function(){});
         this.settings.bindProperty(Settings.BindingDirection.IN,
-            "invert", "invert", function(){});
+            "includeBackground", "includeBackground", function(){});
+        this.settings.bindProperty(Settings.BindingDirection.IN,
+            "dim_factor", "dim_factor", function(){});
         // this.settings.bindProperty(Settings.BindingDirection.IN,
         //     "easeDirection", "easeDirection", function(){});
     }
