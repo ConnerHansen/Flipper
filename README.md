@@ -5,5 +5,6 @@ This project is for a set of workspace transitions for the Cinnamon desktop envi
 - **Deck** - a card-deck like transition where the new workspace either flys in from the left or pops off to the left.
 - **Flip** - a basic flipping transition, where the current workspace flips over to the new workspace.
 - **Rolodex** - a rolodex style flip, hinged on the left side of the screen.
-- **Slide** basic slide transition from one workspace to the next, similar to the native Cinnamon transition.
+- **Slide** - basic slide transition from one workspace to the next, similar to the native Cinnamon transition.
 In addition to the transition style, the easing, timing, transition fade amount, and zoom amount can all be adjusted as well.
+- **Stack** - a stack-like animation that slides windows in and out based on their z-index

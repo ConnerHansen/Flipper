@@ -7,9 +7,9 @@
     "type" : "scale",
     "description" : "Animation duration",
     "min" : 0,
-    "max" : 5000,
+    "max" : 1500,
     "default": 500,
-    "step" : 25
+    "step" : 50
   },
   "pullaway" : {
     "type" : "scale",
@@ -45,13 +45,14 @@
   "transitionEffect": {
     "type": "combobox",
     "description": "Transition Effect",
-    "default": "Slide",
+    "default": "Stack",
     "options": {
       "Cube": "Cube",
       "Deck": "Deck",
       "Flip": "Flip",
       "Rolodex": "Rolodex",
-      "Slide": "Slide"
+      "Slide": "Slide",
+      "Stack" : "Stack"
     }
   },
   "rotateEffect": {
