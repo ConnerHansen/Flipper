@@ -96,6 +96,7 @@ Flipper.prototype = {
       DECK_HEIGHT: 20,
       DECK_ANGLE: 15,
       FLIP_ANGLE: 150,
+      ROLODEX_ANGLE: 15,
       ROLODEX_HALF_ANGLE: 30,
       ROLODEX_FULL_ANGLE: 60,
     },
@@ -437,6 +438,8 @@ Flipper.prototype = {
 
       if(settings.transitionEffect == "Stack") {
         this.stack_start(from, to, direction);
+      } else if(settings.transitionEffect == "Pop") {
+        this.pop_start(from, to, direction);
       } else if(settings.transitionEffect == "Flip") {
         this.flip_start(from, to, direction);
       } else if(settings.transitionEffect == "Cube"){
@@ -447,6 +450,128 @@ Flipper.prototype = {
         this.deck_start(from, to, direction);
       } else if(settings.transitionEffect == "Rolodex"){
         this.rolodex_start(from, to, direction);
+      }
+    },
+
+    ///////////////////////////////////////////
+    // POP
+    ///////////////////////////////////////////
+    pop_end: function(from, to, direction) {
+      from.hide();
+      to.raise_top();
+      to.show();
+      this.new_workspace.activate(global.get_current_time());
+      Main.wm.showWorkspaceOSD();
+
+      if (to.workspaceWindowActors.length > 0) {
+        let range = this.getTime();
+        let startTime = this.getTime();
+        let delay = 0;
+        let step = range / to.workspaceWindowActors.length;
+        let tween = {
+          scale_x: 1.0,
+          scale_y: 1.0,
+          delay: delay,
+          opacity: 255,
+          transition: this.getEasing(false),
+          time: startTime
+        };
+
+        if (direction == Meta.MotionDirection.RIGHT) {
+          to.workspaceWindowActors.reverse();
+        }
+
+        for(let i=0; i<to.workspaceWindowActors.length; ++i) {
+          let actor = to.workspaceWindowActors[i];
+          actor.set_opacity(0);
+          actor.scale_center_x = actor.width / 2;
+          actor.scale_center_y = actor.height / 2;
+          tween.delay = delay;
+          delay += step;
+
+
+          if (direction == Meta.MotionDirection.LEFT) {
+            actor.set_scale(2.0 - settings.pullaway, 2.0 - settings.pullaway);
+          } else {
+            actor.set_scale(settings.pullaway, settings.pullaway);
+          }
+
+          // is this the last entry?
+          if (i == to.workspaceWindowActors.length-1) {
+            tween.onComplete = this.unsetIsAnimating;
+            tween.onCompleteScope = this;
+          } else {
+            delete tween.onComplete;
+            delete tween.onCompleteScope;
+          }
+
+          Tweener.addTween(actor, tween);
+        }
+
+        // Switch it back...
+        if (direction == Meta.MotionDirection.RIGHT) {
+          to.workspaceWindowActors.reverse();
+        }
+      } else {
+        Tweener.addTween(to, {
+          transition: this.getEasing(true),
+          onComplete: this.unsetIsAnimating,
+          onCompleteScope: this,
+          time: this.getTime()
+        });
+      }
+    },
+
+    pop_start: function(from, to, direction) {
+      to.hide();
+
+      if (from.workspaceWindowActors.length > 0) {
+        let range = this.getTime();
+        let startTime = this.getTime();
+        let delay = 0;
+        let step = range / from.workspaceWindowActors.length;
+        let tween = {
+          opacity: 0,
+          transition: this.getEasing(true),
+          time: startTime
+        };
+
+        if (direction == Meta.MotionDirection.LEFT) {
+          tween.scale_x = this.getScale();
+          tween.scale_y =  this.getScale();
+          from.workspaceWindowActors.reverse();
+        } else {
+          tween.scale_x = 2.0 - this.getScale();
+          tween.scale_y = 2.0 - this.getScale();
+        }
+
+        for(let i=from.workspaceWindowActors.length-1; i >= 0; --i) {
+          let actor = from.workspaceWindowActors[i];
+          actor.scale_center_x = actor.width / 2;
+          actor.scale_center_y = actor.height / 2;
+          tween.delay = delay;
+          delay += step;
+
+          if (i == 0) {
+            tween.onCompleteParams = [from, to, direction];
+            tween.onComplete = this.pop_end;
+            tween.onCompleteScope = this;
+          }
+
+          Tweener.addTween(actor, tween);
+        }
+
+        // Switch it back...
+        if (direction == Meta.MotionDirection.LEFT) {
+          from.workspaceWindowActors.reverse();
+        }
+      } else {
+        Tweener.addTween(to, {
+          time: this.getTime(),
+          onCompleteParams: [from, to, direction],
+          onComplete: this.pop_end,
+          onCompleteScope: this
+        });
       }
     },
 
@@ -524,23 +649,12 @@ Flipper.prototype = {
     },
 
     stack_start: function(from, to, direction) {
-      let angle_from;
       let angle_to;
       let x_pos;
 
       to.hide();
 
-      if (direction == Meta.MotionDirection.LEFT) {
-        angle_from = this.const.FLIP_ANGLE;
-        angle_to = 0;
-      } else {
-        angle_from = -this.const.FLIP_ANGLE;
-        angle_to = 0;
-      }
-
-
       if (from.workspaceWindowActors.length > 0) {
-
         let range = this.getTime();
         let startTime = this.getTime();
         let delay = 0;
@@ -567,34 +681,24 @@ Flipper.prototype = {
             actor.scale_center_y = actor.height / 2;
           }
 
+          let tween = {
+            x: x_pos,
+            scale_x: settings.pullaway,
+            scale_y: settings.pullaway,
+            delay: delay,
+            rotation_angle_y: angle_to,
+            opacity: 0,
+            transition: this.getEasing(true),
+            time: startTime
+          };
+
           if (i == 0) {
-            Tweener.addTween(actor, {
-              x: x_pos,
-              scale_x: settings.pullaway,
-              scale_y: settings.pullaway,
-              delay: delay,
-              rotation_angle_y: angle_to,
-              opacity: 0,
-              transition: this.getEasing(true),
-              time: startTime,
-              onCompleteParams: [from, to, direction],
-              onComplete: this.stack_end,
-              onCompleteScope: this
-            });
-          } else {
-            Tweener.addTween(actor, {
-              x: x_pos,
-              scale_x: settings.pullaway,
-              scale_y: settings.pullaway,
-              delay: delay,
-              rotation_angle_y: angle_to,
-              opacity: 0,
-              transition: this.getEasing(true),
-              time: startTime
-            });
+            tween.onCompleteParams = [from, to, direction];
+            tween.onComplete = this.stack_end;
+            tween.onCompleteScope = this;
           }
 
-          // startTime -= step;
+          Tweener.addTween(actor, tween);
           delay += step;
         }
       } else {
@@ -1048,85 +1152,129 @@ Flipper.prototype = {
     // ROLODEX
     ///////////////////////////////////////////
     rolodex_end: function(from, to, direction) {
-      let toTransition;
-      let fromTransition;
+      from.hide();
+      to.raise_top();
+      to.show();
       this.new_workspace.activate(global.get_current_time());
+      Main.wm.showWorkspaceOSD();
 
+      if (to.workspaceWindowActors.length > 0) {
+        let range = this.getTime();
+        let startTime = this.getTime();
+        let delay = 0;
+        let step = range / to.workspaceWindowActors.length;
+        let tween = {
+          scale_x: 1.0,
+          scale_y: 1.0,
+          rotation_angle_x: 0,
+          delay: delay,
+          opacity: 255,
+          transition: this.getEasing(false),
+          time: startTime
+        };
 
-      if (direction == Meta.MotionDirection.LEFT) {
-        Tweener.addTween(to, {
-            rotation_angle_y: 0,
-            opacity: 255,
-            scale_x: 1,
-            scale_y: 1,
-            transition: this.getEasing(false),
-            time: this.getTime(),
-            onComplete: this.unsetIsAnimating,
-            onCompleteScope: this
-        });
+        if (direction == Meta.MotionDirection.RIGHT) {
+          to.workspaceWindowActors.reverse();
+        }
+
+        for(let i=0; i<to.workspaceWindowActors.length; ++i) {
+          let actor = to.workspaceWindowActors[i];
+          actor.set_opacity(0);
+          actor.move_anchor_point(0, 1.5 * this.monitor.height);
+          actor.scale_center_x = actor.width / 2;
+          actor.scale_center_y = actor.height;
+          // actor.scale_center_x = this.monitor.width / 2;
+          // actor.scale_center_y = this.monitor.height;
+          tween.delay = delay;
+          delay += step;
+
+          if (direction == Meta.MotionDirection.LEFT) {
+            actor.set_scale(1.0 * this.getScale(), 1.0 * this.getScale());
+            actor.rotation_angle_x = -this.const.ROLODEX_ANGLE;
+          } else {
+            actor.set_scale(1.0 * this.getScale(), 1.0 * this.getScale());
+            actor.rotation_angle_x = this.const.ROLODEX_ANGLE;
+          }
+
+          // is this the last entry?
+          if (i == to.workspaceWindowActors.length-1) {
+            tween.onComplete = this.unsetIsAnimating;
+            tween.onCompleteScope = this;
+          } else {
+            delete tween.onComplete;
+            delete tween.onCompleteScope;
+          }
+
+          Tweener.addTween(actor, tween);
+        }
+
+        // Switch it back...
+        if (direction == Meta.MotionDirection.RIGHT) {
+          to.workspaceWindowActors.reverse();
+        }
       } else {
-        Tweener.addTween(from, {
-            scale_x: this.getScale(),
-            scale_y: this.getScale(),
-            rotation_angle_y: -this.const.ROLODEX_FULL_ANGLE,
-            opacity: 255 * (1.0 - settings.fade),
-            transition: this.getEasing(false),
-            time: this.getTime(),
-            onComplete: this.unsetIsAnimating,
-            onCompleteScope: this
+        Tweener.addTween(to, {
+          transition: this.getEasing(true),
+          onComplete: this.unsetIsAnimating,
+          onCompleteScope: this,
+          time: this.getTime()
         });
       }
-
-      Main.wm.showWorkspaceOSD();
     },
 
     rolodex_start: function(from, to, direction) {
-      let toTransition;
-      let fromTransition;
+      to.hide();
 
-      from.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
-      to.move_anchor_point_from_gravity(Clutter.Gravity.WEST);
+      if (from.workspaceWindowActors.length > 0) {
+        let range = this.getTime();
+        let startTime = this.getTime();
+        let delay = 0;
+        let step = range / from.workspaceWindowActors.length;
+        let tween = {
+          rotation_angle_x: this.const.ROLODEX_ANGLE,
+          opacity: 0,
+          transition: this.getEasing(true),
+          time: startTime
+        };
 
+        if (direction == Meta.MotionDirection.LEFT) {
+          tween.scale_x = 1.0 * this.getScale(),
+          tween.scale_y = 1.0 * this.getScale(),
+          tween.rotation_angle_x = this.const.ROLODEX_ANGLE;
+          from.workspaceWindowActors.reverse();
+        } else {
+          tween.scale_x = 1.0 * this.getScale(),
+          tween.scale_y = 1.0 * this.getScale(),
+          tween.rotation_angle_x = -this.const.ROLODEX_ANGLE;
+        }
 
-      if (direction == Meta.MotionDirection.LEFT) {
-        to.raise_top();
-        from.set_position(0, this.monitor.height/2 );
-        from.rotation_angle_y = 0;
+        for(let i=from.workspaceWindowActors.length-1; i >= 0; --i) {
+          let actor = from.workspaceWindowActors[i];
+          actor.move_anchor_point(0, 1.5 * this.monitor.height);
+          actor.scale_center_x = actor.width / 2;
+          actor.scale_center_y = actor.height;
+          tween.delay = delay;
+          delay += step;
 
-        to.set_position(0, this.monitor.height/2);
-        to.rotation_angle_y = -this.const.ROLODEX_FULL_ANGLE;
-        to.set_opacity = settings.fade;
+          if (i == 0) {
+            tween.onCompleteParams = [from, to, direction];
+            tween.onComplete = this.rolodex_end;
+            tween.onCompleteScope = this;
+          }
 
-        to.set_scale(this.getScale(), this.getScale());
+          Tweener.addTween(actor, tween);
+        }
 
-        Tweener.addTween(to, {
-            rotation_angle_y: -this.const.ROLODEX_HALF_ANGLE,
-            opacity: 255 * (1.0 - settings.fade),
-            scale_x: this.getHalfScale(),
-            scale_y: this.getHalfScale(),
-            transition: this.getEasing(true),
-            time: this.getTime(),
-            onCompleteParams: [from, to, direction],
-            onComplete: this.rolodex_end,
-            onCompleteScope: this
-        });
+        // Switch it back...
+        if (direction == Meta.MotionDirection.LEFT) {
+          from.workspaceWindowActors.reverse();
+        }
       } else {
-        from.set_position(0, this.monitor.height/2);
-        from.rotation_angle_y = 0;
-
-        to.set_position(0, this.monitor.height/2);
-        to.rotation_angle_y = 0;
-
-        Tweener.addTween(from, {
-            scale_x: this.getHalfScale(),
-            scale_y: this.getHalfScale(),
-            rotation_angle_y: -this.const.ROLODEX_HALF_ANGLE,
-            opacity: 255 * (1.0 - settings.fade),
-            transition: this.getEasing(true),
-            time: this.getTime(),
-            onCompleteParams: [from, to, direction],
-            onComplete: this.rolodex_end,
-            onCompleteScope: this
+        Tweener.addTween(to, {
+          time: this.getTime(),
+          onCompleteParams: [from, to, direction],
+          onComplete: this.rolodex_end,
+          onCompleteScope: this
         });
       }
     },
@@ -1231,28 +1379,30 @@ Flipper.prototype = {
         let background = this._backgroundGroup.get_children()[0];
         Tweener.addTween(background, {
             dim_factor: settings.dim_factor,
-            time: this.getTime()/2,
+            time: this.getTime(),
             transition: 'easeInQuad'
         });
     },
 
-    undimBackground: function() {
+    undimBackground: function(performCheck) {
       global.log("undimBackground -- undimming");
-      this._backgroundGroup.show();
-      let background = this._backgroundGroup.get_children()[0];
-      Tweener.addTween(background, {
-          dim_factor: 1.0,
-          time: this.getTime()/2,
-          transition: 'easeInQuad',
-          onComplete: this.destroy,
-          onCompleteScope: this
-      });
 
-      this.destroy_requested = false;
+      if((performCheck && this.destroy_requested) || !performCheck) {
+        this._backgroundGroup.show();
+        let background = this._backgroundGroup.get_children()[0];
+        Tweener.addTween(background, {
+            dim_factor: 1.0,
+            time: this.getTime(),
+            transition: 'easeInQuad',
+            onComplete: this.destroy,
+            onCompleteScope: this
+        });
+      }
     },
 
     onDestroy: function() {
       this.undimBackground();
+      this.destroy_requested = false;
       global.log("onDestroy done");
     },
 
